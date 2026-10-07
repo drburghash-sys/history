@@ -1,0 +1,13 @@
+{
+  "name":"من كان موجودًا؟ — دول العالم عبر الزمن",
+  "short_name":"دول التاريخ",
+  "description":"ابحث عن الدول والممالك والإمبراطوريات والمدن-الدول القائمة في سنة تاريخية محددة.",
+  "lang":"ar",
+  "dir":"rtl",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#07101f",
+  "theme_color":"#0b1830",
+  "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
