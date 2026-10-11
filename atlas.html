@@ -120,7 +120,7 @@ var SNAPSHOTS=[[-5000,"world_bc5000.geojson"],[-4000,"world_bc4000.geojson"],[-3
 var BASE="https://raw.githubusercontent.com/aourednik/historical-basemaps/master/geojson/";
 var FALLBACK="https://cdn.jsdelivr.net/gh/aourednik/historical-basemaps@master/geojson/";
 var $=function(id){return document.getElementById(id)};
-var slider=$("timeline"), playing=null, timer=null, cache=new Map(), pending=null, sequence=0, drawnKey=null, polygons=null, map=null;
+var slider=$("timeline"), timer=null, inputDelay=null, cache=new Map(), pending=null, pendingKey=null, sequence=0, drawnKey=null, polygons=null, map=null;
 var params=new URLSearchParams(location.search);
 function cleanYear(y){ y=Math.max(-4500,Math.min(750,Math.round(Number(y)||1))); return y===0?1:y }
 function fmt(y){return y<0?Math.abs(y).toLocaleString("ar-SA")+" ق.م":y.toLocaleString("ar-SA")+" م"}
@@ -166,28 +166,29 @@ async function loadSelected(){
  var s=closest(selected),key=s[0], gap=Math.abs(key-selected);
  $("referenceYear").textContent=fmt(key);
  $("difference").textContent=key===selected?"الخريطة مطابقة للسنة المختارة.":"هذه أقرب خريطة متاحة، وتبعد "+gap.toLocaleString("ar-SA")+" سنة عن التاريخ المحدد؛ ليست حدود سنة "+fmt(selected)+".";
- if(drawnKey===key){return}
- if(pending){pending.abort();pending=null}
+ if(drawnKey===key || (pending && pendingKey===key)){return}
+ if(pending){pending.abort();pending=null;pendingKey=null}
  var request=++sequence;
  if(cache.has(key)){paint(cache.get(key),key);return}
  if(polygons){map.removeLayer(polygons);polygons=null;drawnKey=null;$("featureCount").textContent="—"}
  setLoading("جارٍ تحميل خريطة "+fmt(key)+"…",false);
- var controller=new AbortController();pending=controller;
+ var controller=new AbortController();pending=controller;pendingKey=key;
  try{
  var geo=await fetchGeo(s,controller.signal);
- if(request!==sequence)return;
+ if(request!==sequence || closest(selected)[0]!==key)return;
  cache.set(key,geo);
  while(cache.size>3)cache.delete(cache.keys().next().value);
  paint(geo,key)
  }catch(e){if(request!==sequence||e.name==="AbortError")return;setLoading("تعذر تحميل حدود "+fmt(key)+". تحقق من الإنترنت ثم حاول تغيير السنة وإعادتها.",true)}
- finally{if(request===sequence)pending=null}
+ finally{if(request===sequence){pending=null;pendingKey=null}}
 }
-function update(y){selected=cleanYear(y);updateLinks();loadSelected()}
+function update(y){clearTimeout(inputDelay);selected=cleanYear(y);updateLinks();loadSelected()}
 function jump(delta){update(selected+delta)}
 function stop(){if(timer){clearInterval(timer);timer=null}$("play").textContent="▶ تشغيل الزمن"}
 function start(){if(timer){stop();return}if(selected>=750)update(-4500);
  $("play").textContent="Ⅱ إيقاف";timer=setInterval(function(){if(selected>=750){stop();return}update(selected+50)},1000)}
-slider.addEventListener("input",function(){stop();update(this.value)});
+slider.addEventListener("input",function(){stop();selected=cleanYear(this.value);updateLinks();clearTimeout(inputDelay);inputDelay=setTimeout(loadSelected,170)});
+slider.addEventListener("change",function(){clearTimeout(inputDelay);loadSelected()});
 $("prev").onclick=function(){stop();jump(-50)};
 $("next").onclick=function(){stop();jump(50)};
 $("play").onclick=start;
