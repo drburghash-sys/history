@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07101f">
+  <meta name="description" content="أطلس تاريخي عالمي تفاعلي يتغير مع حركة مؤشر الزمن من ٤٥٠٠ ق.م إلى ٧٥٠ م.">
+  <title>الأطلس التاريخي العالمي | من كان موجودًا؟</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root{--bg:#07101f;--panel:#0e1d35;--gold:#f4d692;--muted:#b7c5d8;--edge:#2a4467}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif}
+    body{background:var(--bg);color:#f5f2ea}button,input,a{font:inherit}
+    a{color:var(--gold)}.wrap{max-width:1440px;margin:auto;padding:16px 16px 44px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:15px}
+    .brand{display:flex;align-items:center;gap:13px}.brand img{width:56px;height:56px;border-radius:17px}
+    h1{font-size:clamp(23px,4vw,34px);margin:0}.muted{color:var(--muted);line-height:1.75}
+    .brand p{margin:2px 0;font-size:13px}.btn,select,input[type=number]{background:#122847;color:#fff;border:1px solid #385577;border-radius:12px;padding:10px 14px;cursor:pointer}
+    .btn:hover{border-color:var(--gold)}.btn:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+    .primary{background:linear-gradient(120deg,#caa05b,#f2d48d);color:#142239;border:0;font-weight:800}
+    .panel{background:linear-gradient(140deg,#10213c,#0a172b);border:1px solid var(--edge);border-radius:20px;padding:16px}
+    .intro{margin:0 0 13px}.range-row{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+    #displayYear{font-size:clamp(25px,5vw,37px);color:var(--gold);font-weight:900;font-variant-numeric:tabular-nums}
+    input[type=range]{width:100%;accent-color:#e7bd6e;cursor:pointer;height:30px;margin:12px 0 0;direction:ltr}
+    .range-labels{display:flex;justify-content:space-between;direction:ltr;color:var(--muted);font-size:12px}
+    .controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:16px}
+    .controls label{color:var(--muted);font-size:13px}
+    input[type=number]{width:90px;cursor:text}.quick{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+    .quick .btn{font-size:12px;padding:7px 10px;border-radius:99px}
+    .layout{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:14px;margin-top:14px;align-items:stretch}
+    .map-panel{position:relative;min-width:0;border-radius:20px;overflow:hidden;border:1px solid var(--edge);background:#14243a}
+    #map{height:min(66vh,700px);min-height:420px;direction:ltr;background:#14243a}
+    #busy{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:650;background:#071728ed;border:1px solid #436281;border-radius:100px;padding:8px 14px;font-size:12px;pointer-events:none;max-width:90%;text-align:center}
+    #busy[hidden]{display:none}
+    .leaflet-control-attribution{font-size:10px!important}
+    .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0f2038;color:#f5f2ea}
+    .leaflet-popup-content{line-height:1.65;min-width:180px;direction:rtl}
+    .popup-name{font-size:17px;color:#f4d692;font-weight:800}
+    .sidebar{display:flex;flex-direction:column;gap:12px}
+    .sidebar h2{font-size:16px;margin:0 0 9px}
+    .sidebar p{margin:7px 0;color:var(--muted);font-size:13px;line-height:1.75}
+    .stat{font-weight:800;color:#f4d692;font-size:21px}.tip{color:#c3d0de!important}
+    #places{display:flex;gap:6px;flex-wrap:wrap}
+    .pill{display:inline-block;border:1px solid #3d5472;color:#e8e9e9;border-radius:80px;padding:5px 9px;font-size:11px}
+    .notice{border-right:3px solid #d9ad5b;padding:10px 12px;background:#1c2938;border-radius:6px;margin-top:12px;color:#d6deea;font-size:12.5px;line-height:1.8}
+    .source{font-size:12px;line-height:1.8}.source a{overflow-wrap:anywhere}
+    .statusError{color:#ffc4b6!important}
+    @media(max-width:850px){.layout{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr}.sidewide{grid-column:1/-1}#map{height:53vh;min-height:350px}}
+    @media(max-width:520px){.wrap{padding:11px 9px 30px}.brand img{width:44px;height:44px}.btn{padding:9px 11px}.panel{padding:13px}.sidebar{grid-template-columns:1fr}.sidewide{grid-column:auto}#map{height:55vh;min-height:350px}header .btn{font-size:13px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><img src="./icon.svg" alt=""><div><h1>الأطلس التاريخي العالمي</h1><p class="muted">كيف تغيرت حدود الممالك والدول والأقاليم عبر الزمن؟</p></div></div>
+    <a class="btn" id="listLink" href="./index.html">العودة إلى قائمة الدول ↗</a>
+  </header>
+  <section class="panel" aria-label="الخط الزمني">
+    <div class="range-row"><strong>حرّك المؤشر لتغيير الخريطة</strong><output id="displayYear" for="timeline">١٣٠٠ ق.م</output></div>
+    <input type="range" id="timeline" min="-4500" max="750" step="1" value="-1300" aria-label="السنة التاريخية">
+    <div class="range-labels"><span>٤٥٠٠ ق.م</span><span>٧٥٠ م</span></div>
+    <div class="controls">
+      <button class="btn" id="prev" type="button" title="ارجع ٥٠ سنة">− ٥٠ سنة</button>
+      <button class="btn primary" id="play" type="button">▶ تشغيل الزمن</button>
+      <button class="btn" id="next" type="button" title="تقدم ٥٠ سنة">+ ٥٠ سنة</button>
+      <label for="jumpYear">اذهب إلى سنة</label>
+      <input id="jumpYear" type="number" min="1" max="4500" inputmode="numeric" value="1300">
+      <select id="jumpEra" aria-label="التقويم"><option value="bce">ق.م</option><option value="ce">م</option></select>
+      <button class="btn" id="jump" type="button">اذهب</button>
+    </div>
+    <div class="quick">
+      <button class="btn" data-year="-3000">٣٠٠٠ ق.م</button><button class="btn" data-year="-1500">١٥٠٠ ق.م</button>
+      <button class="btn" data-year="-500">٥٠٠ ق.م</button><button class="btn" data-year="-1">١ ق.م</button>
+      <button class="btn" data-year="300">٣٠٠ م</button><button class="btn" data-year="610">٦١٠ م</button>
+      <button class="btn" data-year="700">٧٠٠ م</button>
+    </div>
+  </section>
+  <div class="layout">
+    <section class="map-panel" aria-label="خريطة العالم التاريخية">
+      <div id="map" role="application" aria-label="خريطة قابلة للتكبير والسحب؛ اضغط أي إقليم لمعرفة اسمه"></div>
+      <div id="busy" role="status" aria-live="polite">جارٍ تهيئة الأطلس…</div>
+    </section>
+    <aside class="sidebar">
+      <section class="panel">
+        <h2>الخريطة المرجعية المستخدمة</h2>
+        <div id="referenceYear" class="stat">—</div>
+        <p id="difference">يُحدَّث المرجع تلقائيًا إلى أقرب تاريخ متاح.</p>
+        <p><span id="featureCount" class="stat">—</span> <span>شكل جغرافي في الملف</span></p>
+      </section>
+      <section class="panel">
+        <h2>الانتقال إلى منطقة</h2>
+        <div id="places">
+          <button class="btn" data-view="world">العالم</button>
+          <button class="btn" data-view="middleeast">الشرق الأوسط</button>
+          <button class="btn" data-view="asia">آسيا</button>
+          <button class="btn" data-view="europe">أوروبا</button>
+          <button class="btn" data-view="africa">إفريقيا</button>
+          <button class="btn" data-view="americas">الأمريكتان</button>
+          <button class="btn" data-view="oceania">أوقيانوسيا</button>
+        </div>
+        <p class="tip">كبّر الخريطة، واسحبها، واضغط أي مساحة ملونة لعرض اسمها.</p>
+      </section>
+      <section class="panel sidewide">
+        <h2>دقة الخريطة ومصدرها</h2>
+        <p id="loadState" aria-live="polite">جارٍ التحميل…</p>
+        <div class="notice">الخرائط مرجعية غير سنوية؛ الحدود لا تتغير إلا عند الانتقال إلى مرجع متاح. تشمل البيانات أقاليم ثقافية وقبلية، وليست كلها دولًا ذات حدود سياسية. البحر والحدود الحديثة في الخلفية للملاحة فقط.</div>
+        <p class="source">المصدر: <a href="https://github.com/aourednik/historical-basemaps" target="_blank" rel="noopener">Historical Basemaps — A. Ourednik والمساهمون</a> (GPL-3.0). مشروع بحثي قابل للتصحيح، وليس مرجعًا قطعيًا للحدود.</p>
+        <p class="source">الربط بقائمة الكيانات في التطبيق الأصلي مبني على <strong>السنة المختارة</strong>، بينما هذه الصفحة تعرض ملفات الحدود المتاحة فعلًا من المصدر المستقل.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+"use strict";
+var SNAPSHOTS=[[-5000,"world_bc5000.geojson"],[-4000,"world_bc4000.geojson"],[-3000,"world_bc3000.geojson"],[-2000,"world_bc2000.geojson"],[-1500,"world_bc1500.geojson"],[-1000,"world_bc1000.geojson"],[-700,"world_bc700.geojson"],[-500,"world_bc500.geojson"],[-400,"world_bc400.geojson"],[-323,"world_bc323.geojson"],[-300,"world_bc300.geojson"],[-200,"world_bc200.geojson"],[-100,"world_bc100.geojson"],[-1,"world_bc1.geojson"],[100,"world_100.geojson"],[200,"world_200.geojson"],[300,"world_300.geojson"],[400,"world_400.geojson"],[500,"world_500.geojson"],[600,"world_600.geojson"],[700,"world_700.geojson"]];
+var BASE="https://raw.githubusercontent.com/aourednik/historical-basemaps/master/geojson/";
+var FALLBACK="https://cdn.jsdelivr.net/gh/aourednik/historical-basemaps@master/geojson/";
+var $=function(id){return document.getElementById(id)};
+var slider=$("timeline"), playing=null, timer=null, cache=new Map(), pending=null, sequence=0, drawnKey=null, polygons=null, map=null;
+var params=new URLSearchParams(location.search);
+function cleanYear(y){ y=Math.max(-4500,Math.min(750,Math.round(Number(y)||1))); return y===0?1:y }
+function fmt(y){return y<0?Math.abs(y).toLocaleString("ar-SA")+" ق.م":y.toLocaleString("ar-SA")+" م"}
+function nameEscape(s){return String(s==null?"غير مسمى":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function closest(y){return SNAPSHOTS.reduce(function(best,s){return Math.abs(s[0]-y)<Math.abs(best[0]-y)?s:best},SNAPSHOTS[0])}
+function hashColor(s){ var h=0, str=String(s||"unknown"); for(var i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))>>>0;return "hsl("+(h%360)+",58%,58%)" }
+var selected=cleanYear(params.has("year")?(params.get("era")==="ce"?Number(params.get("year")):-Number(params.get("year"))):-1300);
+slider.value=selected;
+if(typeof L==="undefined"){$("busy").textContent="لم تُحمّل مكتبة الخرائط. تحقق من الاتصال بالإنترنت.";return}
+map=L.map("map",{worldCopyJump:true,zoomControl:true,minZoom:2,preferCanvas:true}).setView([20,18],2);
+L.tileLayer("https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",{
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  maxZoom:14,subdomains:"abcd",detectRetina:false
+}).addTo(map);
+function setLoading(message,err){$("loadState").textContent=message;$("loadState").classList.toggle("statusError",!!err);$("busy").textContent=message;$("busy").hidden=!message}
+function updateLinks(){var url=new URL(location.href);url.searchParams.set("year",Math.abs(selected));url.searchParams.set("era",selected<0?"bce":"ce");history.replaceState(null,"",url);
+ $("listLink").href="./index.html?year="+Math.abs(selected)+"&era="+(selected<0?"bce":"ce");
+ $("displayYear").textContent=fmt(selected);slider.value=selected;$("jumpYear").value=Math.abs(selected);$("jumpEra").value=selected<0?"bce":"ce";
+}
+function popupFor(f){var p=f.properties||{};var label=p.NAME||p.name||"غير مسمى";var controller=p.SUBJECTO&&p.SUBJECTO!==label?"<p>القوة أو الإقليم المرتبط: "+nameEscape(p.SUBJECTO)+"</p>":"";
+ var precision=p.BORDERPRECISION!=null?"<p>دقة الحدود في المصدر: "+nameEscape(p.BORDERPRECISION)+" من ٣</p>":"";
+ var part=p.PARTOF?"<p>جزء من: "+nameEscape(p.PARTOF)+"</p>":"";
+ return '<div dir="rtl"><div class="popup-name">'+nameEscape(label)+'</div>'+controller+part+precision+"</div>";
+}
+function paint(geo,key){
+ if(polygons)map.removeLayer(polygons);
+ var features=geo&&Array.isArray(geo.features)?geo.features:[];
+ polygons=L.geoJSON(geo,{style:function(f){var p=f.properties||{};var c=hashColor(p.SUBJECTO||p.NAME);var approx=Number(p.BORDERPRECISION||1)<2;
+  return {color:c,weight:approx?.75:1.3,opacity:.9,fillColor:c,fillOpacity:.47,dashArray:approx?"3,4":null}},
+ onEachFeature:function(f,layer){layer.bindPopup(popupFor(f));layer.on("mouseover",function(){this.setStyle({weight:2.5,fillOpacity:.72})});
+ layer.on("mouseout",function(){if(polygons)polygons.resetStyle(this)})}}).addTo(map);
+ drawnKey=key;$("featureCount").textContent=features.length.toLocaleString("ar-SA");
+ setLoading("",false);$("loadState").textContent="تم تحميل خريطة "+fmt(key)+" بنجاح.";
+}
+async function fetchGeo(s,signal){
+ var response;
+ try{response=await fetch(BASE+s[1],{signal:signal});if(!response.ok)throw Error("HTTP "+response.status)}
+ catch(e){if(signal.aborted)throw e;response=await fetch(FALLBACK+s[1],{signal:signal});if(!response.ok)throw Error("HTTP "+response.status)}
+ var json=await response.json();if(json.type!=="FeatureCollection"||!Array.isArray(json.features))throw Error("صيغة ملف الخرائط غير صالحة");
+ return json;
+}
+async function loadSelected(){
+ var s=closest(selected),key=s[0], gap=Math.abs(key-selected);
+ $("referenceYear").textContent=fmt(key);
+ $("difference").textContent=key===selected?"الخريطة مطابقة للسنة المختارة.":"هذه أقرب خريطة متاحة، وتبعد "+gap.toLocaleString("ar-SA")+" سنة عن التاريخ المحدد؛ ليست حدود سنة "+fmt(selected)+".";
+ if(drawnKey===key){return}
+ if(pending){pending.abort();pending=null}
+ var request=++sequence;
+ if(cache.has(key)){paint(cache.get(key),key);return}
+ if(polygons){map.removeLayer(polygons);polygons=null;drawnKey=null;$("featureCount").textContent="—"}
+ setLoading("جارٍ تحميل خريطة "+fmt(key)+"…",false);
+ var controller=new AbortController();pending=controller;
+ try{
+ var geo=await fetchGeo(s,controller.signal);
+ if(request!==sequence)return;
+ cache.set(key,geo);
+ while(cache.size>3)cache.delete(cache.keys().next().value);
+ paint(geo,key)
+ }catch(e){if(request!==sequence||e.name==="AbortError")return;setLoading("تعذر تحميل حدود "+fmt(key)+". تحقق من الإنترنت ثم حاول تغيير السنة وإعادتها.",true)}
+ finally{if(request===sequence)pending=null}
+}
+function update(y){selected=cleanYear(y);updateLinks();loadSelected()}
+function jump(delta){update(selected+delta)}
+function stop(){if(timer){clearInterval(timer);timer=null}$("play").textContent="▶ تشغيل الزمن"}
+function start(){if(timer){stop();return}if(selected>=750)update(-4500);
+ $("play").textContent="Ⅱ إيقاف";timer=setInterval(function(){if(selected>=750){stop();return}update(selected+50)},1000)}
+slider.addEventListener("input",function(){stop();update(this.value)});
+$("prev").onclick=function(){stop();jump(-50)};
+$("next").onclick=function(){stop();jump(50)};
+$("play").onclick=start;
+$("jump").onclick=function(){stop();var y=Math.abs(parseInt($("jumpYear").value,10));if(!Number.isFinite(y)||y<1){$("jumpYear").focus();return}update($("jumpEra").value==="bce"?-Math.min(y,4500):Math.min(y,750))};
+$("jumpYear").addEventListener("keydown",function(e){if(e.key==="Enter")$("jump").click()});
+document.querySelectorAll("[data-year]").forEach(function(btn){btn.onclick=function(){stop();update(Number(btn.dataset.year))}});
+var views={world:[[0,-160],[65,170]],middleeast:[[9,22],[46,66]],asia:[[-13,40],[67,150]],europe:[[32,-13],[73,48]],africa:[[-36,-19],[39,53]],americas:[[-58,-169],[74,-30]],oceania:[[-47,110],[5,180]]};
+document.querySelectorAll("[data-view]").forEach(function(btn){btn.onclick=function(){if(this.dataset.view==="world"){map.setView([16,15],2)}else{map.fitBounds(views[this.dataset.view],{padding:[14,14]})}}});
+updateLinks();loadSelected();
+})();
+</script>
+</body>
+</html>
