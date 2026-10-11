@@ -114,6 +114,11 @@
     <div class="notice">هذا التطبيق يتعامل مع <b>كيانات سياسية</b> لا مع الحضارات: دولة، مملكة، إمبراطورية، سلالة حاكمة ذات دولة، اتحاد سياسي، أو مدينة-دولة. الفترات القديمة قد تكون تقريبية أو متقطعة، ويظهر ذلك على البطاقة.</div>
   </section>
 
+  <section class="method" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border-color:#a98b4c;margin-bottom:16px">
+    <div style="flex:1;min-width:230px"><b style="font-size:18px">🌍 الأطلس التاريخي العالمي</b><div style="margin-top:5px">شاهد خرائط الدول والأقاليم التاريخية وتغيّرها عبر الزمن، مع مؤشر سنوات قابل للتحريك.</div></div>
+    <a id="atlasLink" href="./atlas.html?year=2300&amp;era=bce" style="display:inline-block;background:linear-gradient(120deg,#cba65b,#f4d692);color:#10203a;text-decoration:none;padding:13px 18px;border-radius:14px;font-weight:900">افتح الخريطة التفاعلية ←</a>
+  </section>
+
   <div class="toolbar">
     <input id="search" class="search" type="search" placeholder="ابحث باسم دولة..." />
     <select id="regionFilter" aria-label="تصفية حسب المنطقة"><option value="">كل المناطق</option></select>
@@ -382,6 +387,7 @@ function render(){
   title.textContent="الدول القائمة في "+fmt(y);count.textContent=list.length;
   $("scopeText").textContent="من أصل "+DATA.length+" كيانًا سياسيًا في قاعدة النسخة الحالية";
   const url=new URL(location.href);url.searchParams.set("year",v);url.searchParams.set("era",era);history.replaceState(null,"",url);
+  const atlasLink=document.getElementById("atlasLink");if(atlasLink)atlasLink.href="./atlas.html?year="+v+"&era="+era;
   if(!list.length){results.innerHTML='<div class="empty">لا توجد نتائج مطابقة في قاعدة البيانات الحالية لهذه السنة أو مع عوامل التصفية المحددة.</div>';return}
   const groups={};list.forEach(x=>(groups[x.r]||(groups[x.r]=[])).push(x));
   results.innerHTML="";
