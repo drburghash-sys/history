@@ -1,5 +1,18 @@
-const CACHE="history-v1";
-const ASSETS=["./","./index.html","./icon.svg","./manifest.webmanifest"];
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
-self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));
-self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(resp=>{const copy=resp.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return resp}).catch(()=>caches.match("./index.html"))))});
+const CACHE="history-v2";
+const ASSETS=["./","./index.html","./atlas.html","./icon.svg","./manifest.webmanifest"];
+self.addEventListener("install",event=>{
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
+});
+self.addEventListener("activate",event=>{
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
+});
+self.addEventListener("fetch",event=>{
+  if(event.request.method!=="GET")return;
+  // Global historical GeoJSON, map tiles and Leaflet assets are external.
+  // Do not store them in the PWA cache: files are large and use third-party licences.
+  if(new URL(event.request.url).origin!==self.location.origin)return;
+  event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(resp=>{
+    if(resp.ok){const copy=resp.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy)).catch(()=>{})}
+    return resp;
+  }).catch(()=>event.request.mode==="navigate"?caches.match("./index.html"):Response.error())));
+});
