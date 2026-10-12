@@ -183,6 +183,7 @@ function setLoading(message,err){$("loadState").textContent=message;$("loadState
 function updateLinks(){var url=new URL(location.href);url.searchParams.set("year",Math.abs(selected));url.searchParams.set("era",selected<0?"bce":"ce");history.replaceState(null,"",url);
  $("listLink").href="./index.html?year="+Math.abs(selected)+"&era="+(selected<0?"bce":"ce");
  $("displayYear").textContent=fmt(selected);slider.value=selected;$("jumpYear").value=Math.abs(selected);$("jumpEra").value=selected<0?"bce":"ce";
+ renderStates();
 }
 function popupFor(f){var p=f.properties||{};var label=p.NAME||p.name||"غير مسمى";var controller=p.SUBJECTO&&p.SUBJECTO!==label?"<p>القوة أو الإقليم المرتبط: "+nameEscape(p.SUBJECTO)+"</p>":"";
  var precision=p.BORDERPRECISION!=null?"<p>دقة الحدود في المصدر: "+nameEscape(p.BORDERPRECISION)+" من ٣</p>":"";
@@ -191,13 +192,38 @@ function popupFor(f){var p=f.properties||{};var label=p.NAME||p.name||"غير م
 }
 function paint(geo,key){
  if(polygons)map.removeLayer(polygons);
+ highlightedLayers=[];
+ featureIndex=new Map();
+ activeGeo=geo;
  var features=geo&&Array.isArray(geo.features)?geo.features:[];
- polygons=L.geoJSON(geo,{style:function(f){var p=f.properties||{};var c=hashColor(p.SUBJECTO||p.NAME);var approx=Number(p.BORDERPRECISION||1)<2;
-  return {color:c,weight:approx?.75:1.3,opacity:.9,fillColor:c,fillOpacity:.47,dashArray:approx?"3,4":null}},
- onEachFeature:function(f,layer){layer.bindPopup(popupFor(f));layer.on("mouseover",function(){this.setStyle({weight:2.5,fillOpacity:.72})});
- layer.on("mouseout",function(){if(polygons)polygons.resetStyle(this)})}}).addTo(map);
- drawnKey=key;$("featureCount").textContent=features.length.toLocaleString("ar-SA");
- setLoading("",false);$("loadState").textContent="تم تحميل خريطة "+fmt(key)+" بنجاح.";
+ var counts=[0,0,0,0];
+ features.forEach(function(f){counts[precisionLevel(f)]++});
+ $("precisionStats").innerHTML=[
+  '<div class="precisionCell"><b>'+counts[1].toLocaleString("ar-SA")+'</b>تقريبية (١)</div>',
+  '<div class="precisionCell"><b>'+counts[2].toLocaleString("ar-SA")+'</b>متوسطة (٢)</div>',
+  '<div class="precisionCell"><b>'+counts[3].toLocaleString("ar-SA")+'</b>محددة قانونيًا (٣)</div>',
+  '<div class="precisionCell"><b>'+counts[0].toLocaleString("ar-SA")+'</b>بلا تصنيف</div>'
+ ].join("");
+ polygons=L.geoJSON(geo,{
+  filter:function(f){return precisionMode==="all" || String(precisionLevel(f))===precisionMode},
+  style:function(f){
+   var p=f.properties||{}, c=hashColor(p.SUBJECTO||p.NAME),approx=precisionLevel(f)<2;
+   return {color:c,weight:approx?.75:1.3,opacity:.9,fillColor:c,fillOpacity:.47,dashArray:approx?"3,4":null}
+  },
+  onEachFeature:function(f,layer){
+   registerFeature(f,layer);
+   layer.bindPopup(popupFor(f));
+   layer.on("mouseover",function(){if(!highlightedLayers.includes(this))this.setStyle({weight:2.5,fillOpacity:.72})});
+   layer.on("mouseout",function(){if(polygons&&!highlightedLayers.includes(this))polygons.resetStyle(this)});
+   layer.on("click",function(){clickedFeature(f)});
+  }
+ }).addTo(map);
+ drawnKey=key;
+ $("featureCount").textContent=features.length.toLocaleString("ar-SA");
+ setLoading("",false);
+ $("loadState").textContent="تم تحميل خريطة "+fmt(key)+" — يعرض عامل الدقة "+polygons.getLayers().length.toLocaleString("ar-SA")+" شكلًا من أصل "+features.length.toLocaleString("ar-SA")+".";
+ renderStates();
+ if(chosenName){var e=getActiveEntities().find(function(v){return v.n===chosenName});if(e)highlightEntity(e,false);}
 }
 async function fetchGeo(s,signal){
  var response;
@@ -239,6 +265,119 @@ $("play").onclick=start;
 $("jump").onclick=function(){stop();var y=Math.abs(parseInt($("jumpYear").value,10));if(!Number.isFinite(y)||y<1){$("jumpYear").focus();return}update($("jumpEra").value==="bce"?-Math.min(y,4500):Math.min(y,750))};
 $("jumpYear").addEventListener("keydown",function(e){if(e.key==="Enter")$("jump").click()});
 document.querySelectorAll("[data-year]").forEach(function(btn){btn.onclick=function(){stop();update(Number(btn.dataset.year))}});
+
+var aliases=window.ATLAS_NAME_ALIASES||{}, polityDB=window.HISTORY_DB&&window.HISTORY_DB.entities||[];
+var featureIndex=new Map(), highlightedLayers=[], chosenName=null, precisionMode="all", activeGeo=null;
+function normalized(s){
+ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase().replace(/\s+/g," ");
+}
+function precisionLevel(f){
+ var p=f.properties||{},v=Number(p.BORDERPRECISION);
+ return v===1||v===2||v===3?v:0;
+}
+function getActiveEntities(){
+ return polityDB.filter(function(x){return x.s<=selected&&x.e>=selected});
+}
+function aliasesFor(entity){
+ return aliases[entity.n]||[];
+}
+function registerFeature(f,layer){
+ var p=f.properties||{};
+ [p.NAME,p.SUBJECTO].forEach(function(v){
+  var k=normalized(v);if(!k)return;
+  if(!featureIndex.has(k))featureIndex.set(k,[]);
+  featureIndex.get(k).push(layer);
+ });
+}
+function layersFor(entity){
+ var found=new Set();
+ aliasesFor(entity).forEach(function(alias){
+  (featureIndex.get(normalized(alias))||[]).forEach(function(layer){found.add(layer)});
+ });
+ return Array.from(found);
+}
+function clearHighlights(){
+ if(polygons)highlightedLayers.forEach(function(layer){try{polygons.resetStyle(layer)}catch(e){}});
+ highlightedLayers=[];
+}
+function highlightEntity(entity,zoom){
+ clearHighlights();
+ highlightedLayers=layersFor(entity);
+ if(highlightedLayers.length){
+  highlightedLayers.forEach(function(layer){layer.setStyle({color:"#ffe49e",weight:3.8,opacity:1,fillOpacity:.64,dashArray:null});if(layer.bringToFront)layer.bringToFront()});
+  if(zoom){
+   var bounds=L.featureGroup(highlightedLayers).getBounds();
+   if(bounds.isValid())map.fitBounds(bounds,{padding:[28,28],maxZoom:7,animate:true});
+   highlightedLayers[0].openPopup();
+  }
+ }
+}
+function selectEntity(entity,zoom){
+ chosenName=entity.n;
+ highlightEntity(entity,zoom);
+ renderStates();
+}
+function clickedFeature(f){
+ var p=f.properties||{}, names=[normalized(p.NAME),normalized(p.SUBJECTO)];
+ var match=getActiveEntities().find(function(e){
+  return aliasesFor(e).some(function(a){return names.includes(normalized(a))});
+ });
+ if(match)selectEntity(match,false);
+}
+function stateSummary(entity){
+ if(!entity){
+  $("selectedState").textContent="اضغط على اسم دولة لعرض معلوماتها وحدودها عندما تتوفر.";
+  return;
+ }
+ var related=drawnKey===closest(selected)[0]?layersFor(entity):[];
+ var years=fmt(entity.s)+" – "+fmt(entity.e);
+ var status=related.length
+   ?"هناك "+related.length.toLocaleString("ar-SA")+" مضلع أو جزء مرتبط باسم الدولة في خريطة "+fmt(drawnKey)+". هذا ربط بالأسماء المرجعية وليس توثيقًا لحدود السنة المختارة."
+   :"لا يوجد مضلع ظاهر مطابق لهذه الدولة في الخريطة المرجعية. قد تكون الحدود غير متاحة أو مخفية بعامل الدقة؛ لا يعني هذا أن الدولة لم توجد.";
+ var href="./index.html?year="+Math.abs(selected)+"&era="+(selected<0?"bce":"ce")+"&q="+encodeURIComponent(entity.n);
+ $("selectedState").innerHTML='<strong>'+nameEscape(entity.n)+'</strong><div>'+nameEscape(entity.t)+' | '+nameEscape(entity.r)+'</div>'+
+ '<div>'+nameEscape(years)+'</div><div>تصنيف التأريخ: '+nameEscape(entity.c)+'</div>'+
+ (entity.note?'<div>'+nameEscape(entity.note)+'</div>':"")+
+ '<p>'+nameEscape(status)+'</p><a href="'+href+'">عرض بطاقة الدولة في البرنامج الأصلي ←</a>';
+}
+function renderStates(){
+ var host=$("stateList");if(!host)return;
+ var current=getActiveEntities(), q=normalized($("stateSearch").value), region=$("stateRegion").value, only=$("mappedOnly").checked;
+ if(chosenName&&!current.some(function(e){return e.n===chosenName})){chosenName=null;clearHighlights()}
+ var mapReady=drawnKey===closest(selected)[0];
+ var mappedCount=mapReady?current.filter(function(e){return layersFor(e).length>0}).length:0;
+ $("stateInfo").textContent="تضم قاعدة البرنامج "+current.length.toLocaleString("ar-SA")+" كيانًا في "+fmt(selected)+"؛ "+(mapReady?"المرتبط بحدود ظاهرة: "+mappedCount.toLocaleString("ar-SA"):"جارٍ تحديد ارتباطها بالخريطة المرجعية")+".";
+ var items=current.filter(function(e){
+  return (!q||normalized(e.n+" "+e.r+" "+e.t).includes(q))
+   &&(!region||e.r===region) &&(!only||(mapReady&&layersFor(e).length>0));
+ });
+ host.replaceChildren();
+ var fragment=document.createDocumentFragment();
+ items.forEach(function(e){
+  var linked=mapReady&&layersFor(e).length>0;
+  var btn=document.createElement("button");btn.type="button";btn.className="stateRow"+(chosenName===e.n?" selected":"");
+  btn.setAttribute("aria-label","معلومات "+e.n);
+  var label=document.createElement("span");label.textContent=e.n;
+  var tag=document.createElement("span");tag.className="stateBadge"+(linked?" mapped":"");tag.textContent=linked?"على الخريطة":"بلا حدود";
+  btn.append(label,tag);btn.onclick=function(){selectEntity(e,true)};
+  fragment.appendChild(btn);
+ });
+ if(!items.length){var p=document.createElement("p");p.textContent="لا توجد كيانات مطابقة للبحث أو عوامل العرض الحالية.";fragment.appendChild(p)}
+ host.appendChild(fragment);
+ stateSummary(chosenName?current.find(function(e){return e.n===chosenName}):null);
+}
+Object.keys(window.HISTORY_DB&&window.HISTORY_DB.regions||{}).forEach(function(key){
+ var o=document.createElement("option");o.value=key;o.textContent=key;$("stateRegion").appendChild(o);
+});
+$("stateSearch").addEventListener("input",renderStates);
+$("stateRegion").addEventListener("change",renderStates);
+$("mappedOnly").addEventListener("change",renderStates);
+$("precisionFilter").addEventListener("change",function(){
+ precisionMode=this.value;
+ if(activeGeo&&drawnKey===closest(selected)[0])paint(activeGeo,drawnKey);
+ else loadSelected();
+});
+
 var views={world:[[0,-160],[65,170]],middleeast:[[9,22],[46,66]],asia:[[-13,40],[67,150]],europe:[[32,-13],[73,48]],africa:[[-36,-19],[39,53]],americas:[[-58,-169],[74,-30]],oceania:[[-47,110],[5,180]]};
 document.querySelectorAll("[data-view]").forEach(function(btn){btn.onclick=function(){if(this.dataset.view==="world"){map.setView([16,15],2)}else{map.fitBounds(views[this.dataset.view],{padding:[14,14]})}}});
 updateLinks();loadSelected();
