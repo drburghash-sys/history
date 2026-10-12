@@ -110,8 +110,8 @@
           <select id="stateRegion" aria-label="تصفية الدول حسب الإقليم"><option value="">جميع الأقاليم</option></select>
           <label class="checkline"><input id="mappedOnly" type="checkbox"> عرض الدول المرتبطة بمضلع ظاهر فقط</label>
         </div>
-        <div id="stateList" aria-live="polite"></div>
         <div id="selectedState">اضغط على اسم دولة لعرض موقعها إن كانت الحدود متاحة في الخريطة المرجعية.</div>
+        <div id="stateList" aria-live="polite"></div>
       </section>
       <section class="panel">
         <h2>دقة تحديد الحدود</h2>
@@ -308,6 +308,7 @@ function highlightEntity(entity,zoom){
   if(zoom){
    var bounds=L.featureGroup(highlightedLayers).getBounds();
    if(bounds.isValid())map.fitBounds(bounds,{padding:[28,28],maxZoom:7,animate:true});
+   if(window.innerWidth<850 && map.getContainer().scrollIntoView)map.getContainer().scrollIntoView({behavior:"smooth",block:"center"});
    highlightedLayers[0].setPopupContent(popupForEntity(highlightedLayers[0].feature,entity));
    highlightedLayers[0].openPopup();
   }
