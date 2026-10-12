@@ -215,7 +215,7 @@ function paint(geo,key){
    layer.bindPopup(popupFor(f));
    layer.on("mouseover",function(){if(!highlightedLayers.includes(this))this.setStyle({weight:2.5,fillOpacity:.72})});
    layer.on("mouseout",function(){if(polygons&&!highlightedLayers.includes(this))polygons.resetStyle(this)});
-   layer.on("click",function(){clickedFeature(f)});
+   layer.on("click",function(){clickedFeature(f,this)});
   }
  }).addTo(map);
  drawnKey=key;
@@ -308,6 +308,7 @@ function highlightEntity(entity,zoom){
   if(zoom){
    var bounds=L.featureGroup(highlightedLayers).getBounds();
    if(bounds.isValid())map.fitBounds(bounds,{padding:[28,28],maxZoom:7,animate:true});
+   highlightedLayers[0].setPopupContent(popupForEntity(highlightedLayers[0].feature,entity));
    highlightedLayers[0].openPopup();
   }
  }
@@ -317,12 +318,21 @@ function selectEntity(entity,zoom){
  highlightEntity(entity,zoom);
  renderStates();
 }
-function clickedFeature(f){
+function popupForEntity(f,entity){
+ var source=popupFor(f);
+ return source.replace(/<\/div>$/,'<p style="border-top:1px solid #48617d;padding-top:6px"><strong>في دليل الدول:</strong> '+nameEscape(entity.n)+'<br>الربط بالاسم المرجعي ولا يثبت دقة حدود السنة المختارة.</p></div>');
+}
+function clickedFeature(f,layer){
  var p=f.properties||{}, names=[normalized(p.NAME),normalized(p.SUBJECTO)];
  var match=getActiveEntities().find(function(e){
   return aliasesFor(e).some(function(a){return names.includes(normalized(a))});
  });
- if(match)selectEntity(match,false);
+ if(match){
+  selectEntity(match,false);
+  layer.setPopupContent(popupForEntity(f,match));
+ }else{
+  layer.setPopupContent(popupFor(f).replace(/<\/div>$/,'<p>هذه منطقة في مصدر الخريطة، وقد لا تمثل دولة مستقلة في دليلنا السياسي.</p></div>'));
+ }
 }
 function stateSummary(entity){
  if(!entity){
