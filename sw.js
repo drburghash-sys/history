@@ -1,4 +1,4 @@
-const CACHE="history-v3";
+const CACHE="history-v4";
 const ASSETS=["./","./index.html","./atlas.html","./history-data.js","./atlas-links.js","./icon.svg","./manifest.webmanifest"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
